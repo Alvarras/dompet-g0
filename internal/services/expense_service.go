@@ -1,0 +1,143 @@
+package services
+
+import (
+	"errors"
+
+	"github.com/Alvarras/dompet-g0/internal/dtos/requests"
+	"github.com/Alvarras/dompet-g0/internal/dtos/responses"
+	"github.com/Alvarras/dompet-g0/internal/models"
+	"github.com/Alvarras/dompet-g0/internal/repositories"
+	"github.com/google/uuid"
+)
+
+type ExpenseService struct {
+	expenseRepo *repositories.ExpenseRepository
+	budgetRepo  *repositories.BudgetRepository
+}
+
+func NewExpenseService(expenseRepo *repositories.ExpenseRepository, budgetRepo *repositories.BudgetRepository) *ExpenseService {
+	return &ExpenseService{
+		expenseRepo: expenseRepo,
+		budgetRepo:  budgetRepo,
+	}
+}
+
+func (s *ExpenseService) CreateExpense(userID uuid.UUID, req *requests.CreateExpenseRequest) (*responses.ExpenseResponse, error) {
+	// Check if budget exists and belongs to user
+	budget, err := s.budgetRepo.FindByID(req.BudgetID)
+	if err != nil {
+		return nil, errors.New("budget not found")
+	}
+
+	if budget.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+
+	// Check if there's enough budget
+	if budget.Amount-budget.Spent < req.Amount {
+		return nil, errors.New("insufficient budget")
+	}
+
+	expense := &models.Expense{
+		ID:          uuid.New(),
+		UserID:      userID,
+		BudgetID:    req.BudgetID,
+		Amount:      req.Amount,
+		Description: req.Description,
+		Date:        req.Date,
+	}
+
+	if err := s.expenseRepo.Create(expense); err != nil {
+		return nil, err
+	}
+
+	// Update budget spent amount
+	if err := s.budgetRepo.UpdateSpent(req.BudgetID, req.Amount); err != nil {
+		return nil, err
+	}
+
+	return &responses.ExpenseResponse{
+		ID:          expense.ID,
+		BudgetID:    expense.BudgetID,
+		BudgetName:  budget.Name,
+		Amount:      expense.Amount,
+		Description: expense.Description,
+		Date:        expense.Date,
+	}, nil
+}
+
+func (s *ExpenseService) GetExpenses(userID uuid.UUID) (*responses.ExpenseListResponse, error) {
+	expenses, err := s.expenseRepo.FindByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var expenseResponses []responses.ExpenseResponse
+	for _, expense := range expenses {
+		expenseResponses = append(expenseResponses, responses.ExpenseResponse{
+			ID:          expense.ID,
+			BudgetID:    expense.BudgetID,
+			BudgetName:  expense.Budget.Name,
+			Amount:      expense.Amount,
+			Description: expense.Description,
+			Date:        expense.Date,
+		})
+	}
+
+	return &responses.ExpenseListResponse{
+		Expenses: expenseResponses,
+		Total:    len(expenseResponses),
+	}, nil
+}
+
+func (s *ExpenseService) GetExpensesByBudget(userID uuid.UUID, budgetID uuid.UUID) (*responses.ExpenseListResponse, error) {
+	// Check if budget belongs to user
+	budget, err := s.budgetRepo.FindByID(budgetID)
+	if err != nil {
+		return nil, errors.New("budget not found")
+	}
+
+	if budget.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+
+	expenses, err := s.expenseRepo.FindByBudgetID(budgetID)
+	if err != nil {
+		return nil, err
+	}
+
+	var expenseResponses []responses.ExpenseResponse
+	for _, expense := range expenses {
+		expenseResponses = append(expenseResponses, responses.ExpenseResponse{
+			ID:          expense.ID,
+			BudgetID:    expense.BudgetID,
+			BudgetName:  expense.Budget.Name,
+			Amount:      expense.Amount,
+			Description: expense.Description,
+			Date:        expense.Date,
+		})
+	}
+
+	return &responses.ExpenseListResponse{
+		Expenses: expenseResponses,
+		Total:    len(expenseResponses),
+	}, nil
+}
+
+func (s *ExpenseService) DeleteExpense(userID uuid.UUID, expenseID uuid.UUID) error {
+	expense, err := s.expenseRepo.FindByID(expenseID)
+	if err != nil {
+		return err
+	}
+
+	if expense.UserID != userID {
+		return errors.New("unauthorized")
+	}
+
+	// Update budget spent amount
+	if err := s.budgetRepo.UpdateSpent(expense.BudgetID, -expense.Amount); err != nil {
+		return err
+	}
+
+	return s.expenseRepo.Delete(expenseID)
+}
