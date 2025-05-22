@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"time"
 
 	"github.com/Alvarras/dompet-g0/internal/dtos/requests"
 	"github.com/Alvarras/dompet-g0/internal/dtos/responses"
@@ -36,6 +37,11 @@ func (s *ExpenseService) CreateExpense(userID uuid.UUID, req *requests.CreateExp
 	// Check if there's enough budget
 	if budget.Amount-budget.Spent < req.Amount {
 		return nil, errors.New("insufficient budget")
+	}
+
+	// Set current time if no date is provided
+	if req.Date.IsZero() {
+		req.Date = time.Now()
 	}
 
 	expense := &models.Expense{
