@@ -147,3 +147,62 @@ func (s *ExpenseService) DeleteExpense(userID uuid.UUID, expenseID uuid.UUID) er
 
 	return s.expenseRepo.Delete(expenseID)
 }
+
+// ... existing code ...
+
+func (s *ExpenseService) UpdateExpense(userID uuid.UUID, expenseID uuid.UUID, req *requests.UpdateExpenseRequest) (*responses.ExpenseResponse, error) {
+	// Get existing expense
+	expense, err := s.expenseRepo.FindByID(expenseID)
+	if err != nil {
+		return nil, errors.New("expense not found")
+	}
+
+	// Check if expense belongs to user
+	if expense.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+
+	// Check if budget exists and belongs to user
+	budget, err := s.budgetRepo.FindByID(req.BudgetID)
+	if err != nil {
+		return nil, errors.New("budget not found")
+	}
+
+	if budget.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+
+	// Calculate budget adjustment
+	budgetAdjustment := req.Amount - expense.Amount
+
+	// Check if there's enough budget for the adjustment
+	if budget.Amount-budget.Spent < budgetAdjustment {
+		return nil, errors.New("insufficient budget")
+	}
+
+	// Update expense
+	expense.BudgetID = req.BudgetID
+	expense.Amount = req.Amount
+	expense.Description = req.Description
+	if !req.Date.IsZero() {
+		expense.Date = req.Date
+	}
+
+	if err := s.expenseRepo.Update(expense); err != nil {
+		return nil, err
+	}
+
+	// Update budget spent amount
+	if err := s.budgetRepo.UpdateSpent(req.BudgetID, budgetAdjustment); err != nil {
+		return nil, err
+	}
+
+	return &responses.ExpenseResponse{
+		ID:          expense.ID,
+		BudgetID:    expense.BudgetID,
+		BudgetName:  budget.Name,
+		Amount:      expense.Amount,
+		Description: expense.Description,
+		Date:        expense.Date,
+	}, nil
+}

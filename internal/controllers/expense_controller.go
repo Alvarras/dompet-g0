@@ -82,3 +82,40 @@ func (c *ExpenseController) DeleteExpense(ctx echo.Context) error {
 
 	return ctx.NoContent(http.StatusNoContent)
 }
+
+// ... existing code ...
+
+func (c *ExpenseController) UpdateExpense(ctx echo.Context) error {
+	userID := ctx.Get("user_id").(uuid.UUID)
+	expenseID, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse("invalid expense id", "EXPENSE_009"))
+	}
+
+	var req requests.UpdateExpenseRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse(err.Error(), "EXPENSE_010"))
+	}
+
+	if err := c.validate.Struct(req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse(err.Error(), "EXPENSE_011"))
+	}
+
+	response, err := c.expenseService.UpdateExpense(userID, expenseID, &req)
+	if err != nil {
+		switch err.Error() {
+		case "expense not found":
+			return ctx.JSON(http.StatusNotFound, responses.NewErrorResponse(err.Error(), "EXPENSE_012"))
+		case "budget not found":
+			return ctx.JSON(http.StatusNotFound, responses.NewErrorResponse(err.Error(), "EXPENSE_013"))
+		case "unauthorized":
+			return ctx.JSON(http.StatusUnauthorized, responses.NewErrorResponse(err.Error(), "EXPENSE_014"))
+		case "insufficient budget":
+			return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse(err.Error(), "EXPENSE_015"))
+		default:
+			return ctx.JSON(http.StatusInternalServerError, responses.NewErrorResponse(err.Error(), "EXPENSE_016"))
+		}
+	}
+
+	return ctx.JSON(http.StatusOK, responses.NewSuccessResponse(response))
+}

@@ -94,6 +94,7 @@ func main() {
 			expenses.POST("", expenseController.CreateExpense)
 			expenses.GET("", expenseController.GetExpenses)
 			expenses.GET("/budget/:budget_id", expenseController.GetExpensesByBudget)
+			expenses.PUT("/:id", expenseController.UpdateExpense)
 			expenses.DELETE("/:id", expenseController.DeleteExpense)
 		}
 	}
