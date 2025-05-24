@@ -37,7 +37,16 @@ func (c *ExpenseController) CreateExpense(ctx echo.Context) error {
 
 	response, err := c.expenseService.CreateExpense(userID, &req)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse(err.Error(), "EXPENSE_003"))
+		switch err.Error() {
+		case "budget not found":
+			return ctx.JSON(http.StatusNotFound, responses.NewErrorResponse(err.Error(), "EXPENSE_002"))
+		case "unauthorized":
+			return ctx.JSON(http.StatusUnauthorized, responses.NewErrorResponse(err.Error(), "EXPENSE_004"))
+		case "insufficient budget":
+			return ctx.JSON(http.StatusBadRequest, responses.NewErrorResponse(err.Error(), "EXPENSE_003"))
+		default:
+			return ctx.JSON(http.StatusInternalServerError, responses.NewErrorResponse(err.Error(), "EXPENSE_005"))
+		}
 	}
 
 	return ctx.JSON(http.StatusCreated, responses.NewSuccessResponse(response))
@@ -82,8 +91,6 @@ func (c *ExpenseController) DeleteExpense(ctx echo.Context) error {
 
 	return ctx.NoContent(http.StatusNoContent)
 }
-
-// ... existing code ...
 
 func (c *ExpenseController) UpdateExpense(ctx echo.Context) error {
 	userID := ctx.Get("user_id").(uuid.UUID)

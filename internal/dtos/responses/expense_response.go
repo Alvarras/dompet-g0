@@ -6,6 +6,27 @@ import (
 	"github.com/google/uuid"
 )
 
+// CreateExpenseResponse is used for POST /expenses response
+type CreateExpenseResponse struct {
+	ID          uuid.UUID `json:"id"`
+	BudgetID    uuid.UUID `json:"budget_id"`
+	BudgetName  string    `json:"budget_name"`
+	Amount      float64   `json:"amount"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+}
+
+// UpdateExpenseResponse is used for PUT /expenses/:id response
+type UpdateExpenseResponse struct {
+	ID          uuid.UUID `json:"id"`
+	BudgetID    uuid.UUID `json:"budget_id"`
+	BudgetName  string    `json:"budget_name"`
+	Amount      float64   `json:"amount"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+}
+
+// ExpenseResponse is used for GET responses
 type ExpenseResponse struct {
 	ID              uuid.UUID `json:"id"`
 	BudgetID        uuid.UUID `json:"budget_id"`

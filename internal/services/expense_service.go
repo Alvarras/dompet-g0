@@ -23,7 +23,7 @@ func NewExpenseService(expenseRepo *repositories.ExpenseRepository, budgetRepo *
 	}
 }
 
-func (s *ExpenseService) CreateExpense(userID uuid.UUID, req *requests.CreateExpenseRequest) (*responses.ExpenseResponse, error) {
+func (s *ExpenseService) CreateExpense(userID uuid.UUID, req *requests.CreateExpenseRequest) (*responses.CreateExpenseResponse, error) {
 	// Check if budget exists and belongs to user
 	budget, err := s.budgetRepo.FindByID(req.BudgetID)
 	if err != nil {
@@ -62,7 +62,7 @@ func (s *ExpenseService) CreateExpense(userID uuid.UUID, req *requests.CreateExp
 		return nil, err
 	}
 
-	return &responses.ExpenseResponse{
+	return &responses.CreateExpenseResponse{
 		ID:          expense.ID,
 		BudgetID:    expense.BudgetID,
 		BudgetName:  budget.Name,
@@ -160,7 +160,7 @@ func (s *ExpenseService) DeleteExpense(userID uuid.UUID, expenseID uuid.UUID) er
 	return s.expenseRepo.Delete(expenseID)
 }
 
-func (s *ExpenseService) UpdateExpense(userID uuid.UUID, expenseID uuid.UUID, req *requests.UpdateExpenseRequest) (*responses.ExpenseResponse, error) {
+func (s *ExpenseService) UpdateExpense(userID uuid.UUID, expenseID uuid.UUID, req *requests.UpdateExpenseRequest) (*responses.UpdateExpenseResponse, error) {
 	// Get existing expense
 	expense, err := s.expenseRepo.FindByID(expenseID)
 	if err != nil {
@@ -207,7 +207,7 @@ func (s *ExpenseService) UpdateExpense(userID uuid.UUID, expenseID uuid.UUID, re
 		return nil, err
 	}
 
-	return &responses.ExpenseResponse{
+	return &responses.UpdateExpenseResponse{
 		ID:          expense.ID,
 		BudgetID:    expense.BudgetID,
 		BudgetName:  budget.Name,
