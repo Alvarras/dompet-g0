@@ -7,11 +7,10 @@ import (
 
 	"github.com/Alvarras/dompet-g0/internal/config"
 	"github.com/Alvarras/dompet-g0/internal/controllers"
-	"github.com/Alvarras/dompet-g0/internal/middlewares"
 	"github.com/Alvarras/dompet-g0/internal/models"
 	"github.com/Alvarras/dompet-g0/internal/repositories"
+	"github.com/Alvarras/dompet-g0/internal/routes"
 	"github.com/Alvarras/dompet-g0/internal/services"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gorm.io/driver/mysql"
@@ -71,33 +70,8 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// Routes
-	v1 := e.Group("/api/v1")
-	{
-		// Public routes
-		v1.POST("/register", authController.Register)
-		v1.POST("/login", authController.Login)
-
-		// Protected routes
-		protected := v1.Group("")
-		protected.Use(middlewares.AuthMiddleware(cfg.JWT.Secret))
-		{
-			// Budget routes
-			budgets := protected.Group("/budgets")
-			budgets.POST("", budgetController.CreateBudget)
-			budgets.GET("", budgetController.GetBudgets)
-			budgets.PUT("/:id", budgetController.UpdateBudget)
-			budgets.DELETE("/:id", budgetController.DeleteBudget)
-
-			// Expense routes
-			expenses := protected.Group("/expenses")
-			expenses.POST("", expenseController.CreateExpense)
-			expenses.GET("", expenseController.GetExpenses)
-			expenses.GET("/budget/:budget_id", expenseController.GetExpensesByBudget)
-			expenses.PUT("/:id", expenseController.UpdateExpense)
-			expenses.DELETE("/:id", expenseController.DeleteExpense)
-		}
-	}
+	// Setup routes
+	routes.SetupRoutes(e, cfg.JWT.Secret, authController, budgetController, expenseController)
 
 	// Start server
 	serverAddr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)

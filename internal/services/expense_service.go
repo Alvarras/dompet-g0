@@ -80,13 +80,22 @@ func (s *ExpenseService) GetExpenses(userID uuid.UUID) (*responses.ExpenseListRe
 
 	var expenseResponses []responses.ExpenseResponse
 	for _, expense := range expenses {
+		// Get budget information
+		budget, err := s.budgetRepo.FindByID(expense.BudgetID)
+		if err != nil {
+			return nil, err
+		}
+
 		expenseResponses = append(expenseResponses, responses.ExpenseResponse{
-			ID:          expense.ID,
-			BudgetID:    expense.BudgetID,
-			BudgetName:  expense.Budget.Name,
-			Amount:      expense.Amount,
-			Description: expense.Description,
-			Date:        expense.Date,
+			ID:              expense.ID,
+			BudgetID:        expense.BudgetID,
+			BudgetName:      expense.Budget.Name,
+			Amount:          expense.Amount,
+			Description:     expense.Description,
+			Date:            expense.Date,
+			BudgetRemaining: budget.Amount - budget.Spent,
+			BudgetSpent:     budget.Spent,
+			BudgetTotal:     budget.Amount,
 		})
 	}
 
@@ -115,12 +124,15 @@ func (s *ExpenseService) GetExpensesByBudget(userID uuid.UUID, budgetID uuid.UUI
 	var expenseResponses []responses.ExpenseResponse
 	for _, expense := range expenses {
 		expenseResponses = append(expenseResponses, responses.ExpenseResponse{
-			ID:          expense.ID,
-			BudgetID:    expense.BudgetID,
-			BudgetName:  expense.Budget.Name,
-			Amount:      expense.Amount,
-			Description: expense.Description,
-			Date:        expense.Date,
+			ID:              expense.ID,
+			BudgetID:        expense.BudgetID,
+			BudgetName:      expense.Budget.Name,
+			Amount:          expense.Amount,
+			Description:     expense.Description,
+			Date:            expense.Date,
+			BudgetRemaining: budget.Amount - budget.Spent,
+			BudgetSpent:     budget.Spent,
+			BudgetTotal:     budget.Amount,
 		})
 	}
 
@@ -147,8 +159,6 @@ func (s *ExpenseService) DeleteExpense(userID uuid.UUID, expenseID uuid.UUID) er
 
 	return s.expenseRepo.Delete(expenseID)
 }
-
-// ... existing code ...
 
 func (s *ExpenseService) UpdateExpense(userID uuid.UUID, expenseID uuid.UUID, req *requests.UpdateExpenseRequest) (*responses.ExpenseResponse, error) {
 	// Get existing expense
